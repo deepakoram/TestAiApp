@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import mic_icon from '../assets/mic.svg';
+import mute_icon from '../assets/mute.svg';
 
 const AiAgent = () => {
     //  State to manage recording status and transcribed text
@@ -90,6 +92,31 @@ const AiAgent = () => {
             }
         }
         return null;
+    };
+
+    // Function to get default response when no banking answer is found
+    const getDefaultResponse = (transcript) => {
+        const lowerTranscript = transcript.toLowerCase();
+        
+        // Check for common non-banking phrases and provide appropriate responses
+        if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi') || lowerTranscript.includes('hey')) {
+            return "Hello! I'm your AI banking assistant. How can I help you with your banking needs today? You can ask me about your account balance, transactions, card status, and more.";
+        }
+        
+        if (lowerTranscript.includes('thank') || lowerTranscript.includes('thanks')) {
+            return "You're welcome! I'm here to help with all your banking questions. Feel free to ask me anything about your accounts, transactions, or banking services.";
+        }
+        
+        if (lowerTranscript.includes('bye') || lowerTranscript.includes('goodbye')) {
+            return "Goodbye! Thank you for using our AI banking assistant. Have a great day!";
+        }
+        
+        if (lowerTranscript.includes('help') || lowerTranscript.includes('what can you do')) {
+            return "I can help you with various banking tasks! You can ask me about your account balance, transaction status, card information, deposit availability, withdrawal limits, interest rates, account fees, statement availability, loan payments, and account security. Just ask me any banking-related question!";
+        }
+        
+        // Default response for unrecognized questions
+        return "I understand you said: '" + transcript + "'. I'm specifically designed to help with banking-related questions. You can ask me about your account balance, transactions, card status, deposits, withdrawals, interest rates, fees, statements, loans, or account security. How can I assist you with your banking needs?";
     };
 
     // Function to add message to history
@@ -291,15 +318,44 @@ const AiAgent = () => {
             const bankingAnswer = findBankingAnswer(transcript);
             const timestamp = new Date().toLocaleString();
             
-            // Add to message history
-            addToMessageHistory(transcript, bankingAnswer, timestamp);
+            // Add to message history immediately
+            addToMessageHistory(transcript, null, timestamp);
             
-            if (bankingAnswer) {
-                // Automatically speak the banking answer
-                setTimeout(() => {
-                    speakTranscript(bankingAnswer);
-                }, 1000); // Small delay to ensure transcript is set
-            }
+            // Add a longer delay for more natural conversation flow
+            setTimeout(() => {
+                if (bankingAnswer) {
+                    // Update the message with banking answer
+                    setMessageHistory(prev => 
+                        prev.map(msg => 
+                            msg.timestamp === timestamp 
+                                ? { ...msg, answer: bankingAnswer, isBankingQuestion: true }
+                                : msg
+                        )
+                    );
+                    
+                    // Speak the banking answer after a brief pause
+                    setTimeout(() => {
+                        speakTranscript(bankingAnswer);
+                    }, 500);
+                } else {
+                    // Get default response
+                    const defaultResponse = getDefaultResponse(transcript);
+                    
+                    // Update the message with default answer
+                    setMessageHistory(prev => 
+                        prev.map(msg => 
+                            msg.timestamp === timestamp 
+                                ? { ...msg, answer: defaultResponse, isBankingQuestion: false }
+                                : msg
+                        )
+                    );
+                    
+                    // Speak the default response after a brief pause
+                    setTimeout(() => {
+                        speakTranscript(defaultResponse);
+                    }, 500);
+                }
+            }, 1500); // 1.5 second delay for more natural conversation flow
         }
     }, [transcript]);
 
@@ -307,9 +363,9 @@ const AiAgent = () => {
         <div style={{ 
             maxWidth: '800px', 
             margin: '0 auto',
-            height: '80vh',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            height: '80vh'
         }}>
             
             {isProcessing && (
@@ -329,7 +385,7 @@ const AiAgent = () => {
                 flex: 1,
                 overflowY: 'auto',
                 padding: '20px',
-                backgroundColor: '#f5f5f5',
+                // backgroundColor: '#f5f5f5',
                 minHeight: 0,
                 borderRadius: '10px'
             }}>
@@ -423,7 +479,9 @@ const AiAgent = () => {
                 backgroundColor: 'white',
                 display: 'flex',
                 justifyContent: 'center',
-                gap: '10px'
+                gap: '10px',
+                backgroundColor: '#1c1c1c'
+                // background: 'linear-gradient(to bottom, #1c1c1c, #756d31)'
             }}>
                 <button 
                     onClick={isRecording ? stopRecording : startRecording} 
@@ -433,15 +491,18 @@ const AiAgent = () => {
                         backgroundColor: isRecording ? '#ff4444' : (isSpeaking ? '#cccccc' : '#4CAF50'),
                         color: 'white',
                         border: 'none',
-                        borderRadius: '5px',
+                        borderRadius: 50,
                         cursor: (isProcessing || isSpeaking) ? 'not-allowed' : 'pointer',
-                        minWidth: '80px'
+                        minWidth: '60px',
+                        height: '60px'
                     }}
                 >
-                    {isRecording ? 'Stop' : (isSpeaking ? 'Spk...' : 'Start')}
+                    {isRecording ? <img src={mic_icon} alt="mic" style={{ width: '20px', height: '20px' }} /> : (isSpeaking ? <img src={mic_icon} alt="mic" style={{ width: '20px', height: '20px' }} /> : 
+                        <img src={mic_icon} alt="mic" style={{ width: '20px', height: '20px' }} />
+                        )}
                 </button>
 
-                {messageHistory.length > 0 && (
+                {/* {messageHistory.length > 0 && (
                     <button 
                         onClick={clearMessageHistory}
                         disabled={isSpeaking}
@@ -450,13 +511,15 @@ const AiAgent = () => {
                             backgroundColor: isSpeaking ? '#cccccc' : '#f44336',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '5px',
-                            cursor: isSpeaking ? 'not-allowed' : 'pointer'
+                            borderRadius: 50,
+                            cursor: isSpeaking ? 'not-allowed' : 'pointer',
+                            minWidth: '60px',
+                            height: '60px'
                         }}
                     >
-                        Clear
+                        Cle
                     </button>
-                )}
+                )} */}
             </div>
         </div>
     );
