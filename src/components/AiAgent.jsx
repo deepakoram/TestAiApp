@@ -7,15 +7,112 @@ const AiAgent = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState('');
     const [isSpeaking, setIsSpeaking] = useState(false);
+    const [messageHistory, setMessageHistory] = useState([]); // Store conversation history
     const audioChunks = useRef([]); //  Buffer to store audio data
     const mediaRecorderRef = useRef(null); // Reference for MediaRecorder
     const streamRef = useRef(null); // Reference for the audio stream
     const speechRef = useRef(null); // Reference for speech synthesis
+    const messagesEndRef = useRef(null); // Reference for auto-scroll
     console.log(transcript, 'transcript');
 
+    // Auto-scroll to bottom of messages
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messageHistory]);
+
+    // Banking Q&A Database
+    const bankingQA = [
+        {
+            keywords: ['balance', 'account balance', 'how much', 'money', 'funds'],
+            question: 'What is my account balance?',
+            answer: 'Your current account balance is $2,450.75. This includes your checking account with $1,200.50 and savings account with $1,250.25.'
+        },
+        {
+            keywords: ['transaction', 'transaction status', 'payment', 'transfer', 'pending'],
+            question: 'What is my transaction status?',
+            answer: 'Your recent transaction of $150.00 to Amazon.com is still pending and should be processed within 1-2 business days. Your previous transaction of $75.50 to Starbucks has been completed successfully.'
+        },
+        {
+            keywords: ['card', 'debit card', 'credit card', 'card status', 'blocked'],
+            question: 'Is my card working?',
+            answer: 'Your debit card is active and working normally. There are no restrictions or blocks on your account. You can use it for purchases and ATM withdrawals.'
+        },
+        {
+            keywords: ['deposit', 'deposited', 'when', 'clear', 'available'],
+            question: 'When will my deposit be available?',
+            answer: 'Your deposit of $500.00 made today will be available in your account by tomorrow morning at 9 AM. Standard deposits typically clear within 1 business day.'
+        },
+        {
+            keywords: ['withdraw', 'withdrawal', 'atm', 'cash', 'limit'],
+            question: 'What is my withdrawal limit?',
+            answer: 'Your daily ATM withdrawal limit is $500.00, and your daily purchase limit is $2,000.00. You can increase these limits by contacting customer service.'
+        },
+        {
+            keywords: ['interest', 'rate', 'savings', 'apy', 'earnings'],
+            question: 'What is my interest rate?',
+            answer: 'Your savings account currently earns 2.5% APY. You earned $15.75 in interest this month. Your checking account earns 0.1% APY on balances over $1,000.'
+        },
+        {
+            keywords: ['fee', 'charges', 'monthly fee', 'service charge'],
+            question: 'Are there any fees on my account?',
+            answer: 'You have no monthly maintenance fees on your account. Your last transaction fee was $3.50 for an out-of-network ATM withdrawal on March 15th.'
+        },
+        {
+            keywords: ['statement', 'monthly statement', 'bill', 'invoice'],
+            question: 'When is my statement available?',
+            answer: 'Your monthly statement will be available online on the 1st of each month. Your current statement period ends on the 31st, and the new statement will be ready on the 1st.'
+        },
+        {
+            keywords: ['loan', 'mortgage', 'payment', 'due date', 'installment'],
+            question: 'When is my loan payment due?',
+            answer: 'Your mortgage payment of $1,250.00 is due on the 15th of each month. Your next payment is due in 8 days. You can make early payments through the mobile app.'
+        },
+        {
+            keywords: ['fraud', 'suspicious', 'unauthorized', 'security', 'alert'],
+            question: 'Is my account secure?',
+            answer: 'Your account is secure and there are no suspicious activities detected. We have fraud monitoring systems in place 24/7. If you notice any unauthorized transactions, please contact us immediately.'
+        }
+    ];
+
+    // Function to find matching banking answer
+    const findBankingAnswer = (transcript) => {
+        const lowerTranscript = transcript.toLowerCase();
+        
+        for (const qa of bankingQA) {
+            for (const keyword of qa.keywords) {
+                if (lowerTranscript.includes(keyword.toLowerCase())) {
+                    return qa.answer;
+                }
+            }
+        }
+        return null;
+    };
+
+    // Function to add message to history
+    const addToMessageHistory = (question, answer, timestamp) => {
+        const newMessage = {
+            id: Date.now(),
+            question,
+            answer,
+            timestamp,
+            isBankingQuestion: !!answer
+        };
+        setMessageHistory(prev => [...prev, newMessage]);
+    };
+
+    // Function to clear message history
+    const clearMessageHistory = () => {
+        setMessageHistory([]);
+    };
+
     // TTS function to read the transcript using ElevenLabs
-    const speakTranscript = async () => {
-        if (!transcript) return;
+    const speakTranscript = async (textToSpeak = null) => {
+        const text = textToSpeak || transcript;
+        if (!text) return;
         
         const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY || 'YOUR_ELEVENLABS_API_KEY';
         
@@ -42,7 +139,7 @@ const AiAgent = () => {
                     'xi-api-key': apiKey,
                 },
                 body: JSON.stringify({
-                    text: transcript,
+                    text: text,
                     model_id: 'eleven_monolingual_v1',
                     voice_settings: {
                         stability: 0.5,
@@ -190,29 +287,41 @@ const AiAgent = () => {
 
     useEffect(() => {
         if (transcript) {
-            speakTranscript();
+            // Check if transcript contains banking-related questions
+            const bankingAnswer = findBankingAnswer(transcript);
+            const timestamp = new Date().toLocaleString();
+            
+            // Add to message history
+            addToMessageHistory(transcript, bankingAnswer, timestamp);
+            
+            if (bankingAnswer) {
+                // Automatically speak the banking answer
+                setTimeout(() => {
+                    speakTranscript(bankingAnswer);
+                }, 1000); // Small delay to ensure transcript is set
+            }
         }
     }, [transcript]);
 
     return (
-        <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-            <h2>AI Voice Agent</h2>
+        <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+            <h2>AI Banking Assistant</h2>
             
             <div style={{ marginBottom: '20px' }}>
                 <button 
                     onClick={startRecording} 
-                    disabled={isRecording || isProcessing}
+                    disabled={isRecording || isProcessing || isSpeaking}
                     style={{
                         padding: '10px 20px',
                         marginRight: '10px',
-                        backgroundColor: isRecording ? '#ff4444' : '#4CAF50',
+                        backgroundColor: isRecording ? '#ff4444' : (isSpeaking ? '#cccccc' : '#4CAF50'),
                         color: 'white',
                         border: 'none',
                         borderRadius: '5px',
-                        cursor: isRecording || isProcessing ? 'not-allowed' : 'pointer'
+                        cursor: (isRecording || isProcessing || isSpeaking) ? 'not-allowed' : 'pointer'
                     }}
                 >
-                    {isRecording ? 'Recording...' : 'Start Recording'}
+                    {isRecording ? 'Recording...' : (isSpeaking ? 'Speaking...' : 'Start Recording')}
                 </button>
                 
                 <button 
@@ -220,6 +329,7 @@ const AiAgent = () => {
                     disabled={!isRecording || isProcessing}
                     style={{
                         padding: '10px 20px',
+                        marginRight: '10px',
                         backgroundColor: !isRecording ? '#cccccc' : '#ff4444',
                         color: 'white',
                         border: 'none',
@@ -229,6 +339,23 @@ const AiAgent = () => {
                 >
                     Stop Recording
                 </button>
+
+                {messageHistory.length > 0 && (
+                    <button 
+                        onClick={clearMessageHistory}
+                        disabled={isSpeaking}
+                        style={{
+                            padding: '10px 20px',
+                            backgroundColor: isSpeaking ? '#cccccc' : '#f44336',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: isSpeaking ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        Clear History
+                    </button>
+                )}
             </div>
             
             {isProcessing && (
@@ -242,43 +369,102 @@ const AiAgent = () => {
                     {error}
                 </div>
             )}
-            
-            {transcript && (
-                <div style={{ marginTop: '20px' }}>
-                    <h3>Transcript:</h3>
-                    <div style={{ 
-                        padding: '15px', 
-                        backgroundColor: '#f5f5f5', 
-                        borderRadius: '5px',
-                        border: '1px solid #ddd',
-                        minHeight: '100px'
-                    }}>
-                        {transcript}
-                    </div>
-                    <div style={{ marginTop: '10px' }}>
-                        <button 
-                            onClick={isSpeaking ? stopSpeaking : speakTranscript} 
-                            disabled={!transcript}
-                            style={{
-                                padding: '10px 20px',
-                                marginRight: '10px',
-                                backgroundColor: isSpeaking ? '#ff9800' : '#4CAF50',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '5px',
-                                cursor: !transcript ? 'not-allowed' : 'pointer'
-                            }}
-                        >
-                            {isSpeaking ? 'Stop Speaking' : 'Speak Transcript'}
-                        </button>
-                        {isSpeaking && (
-                            <span style={{ color: '#2196F3', fontSize: '14px' }}>
-                                🔊 Speaking...
-                            </span>
-                        )}
-                    </div>
+
+            {/* Message History */}
+            {messageHistory.length > 0 && (
+                <div style={{ 
+                    marginBottom: '20px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    border: '1px solid #ddd',
+                    borderRadius: '5px',
+                    padding: '10px',
+                    backgroundColor: '#fafafa'
+                }}>
+                    <h3 style={{ marginTop: '0', marginBottom: '15px', color: '#333' }}>
+                        📋 Conversation History ({messageHistory.length} messages)
+                    </h3>
+                    
+                    {messageHistory.map((message, index) => (
+                        <div key={message.id} style={{ 
+                            marginBottom: '15px',
+                            padding: '10px',
+                            backgroundColor: 'white',
+                            borderRadius: '5px',
+                            border: '1px solid #e0e0e0'
+                        }}>
+                            <div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center',
+                                marginBottom: '5px'
+                            }}>
+                                <span style={{ 
+                                    fontSize: '12px', 
+                                    color: '#666',
+                                    fontWeight: 'bold'
+                                }}>
+                                    {message.timestamp}
+                                </span>
+                                {message.isBankingQuestion && (
+                                    <span style={{ 
+                                        fontSize: '10px', 
+                                        backgroundColor: '#4CAF50',
+                                        color: 'white',
+                                        padding: '2px 6px',
+                                        borderRadius: '10px'
+                                    }}>
+                                        Banking
+                                    </span>
+                                )}
+                            </div>
+                            
+                            <div style={{ marginBottom: '8px' }}>
+                                <strong style={{ color: '#2196F3' }}>You:</strong>
+                                <div style={{ 
+                                    padding: '8px',
+                                    backgroundColor: '#f5f5f5',
+                                    borderRadius: '3px',
+                                    marginTop: '3px'
+                                }}>
+                                    {message.question}
+                                </div>
+                            </div>
+                            
+                            {message.answer && (
+                                <div>
+                                    <strong style={{ color: '#4CAF50' }}>Assistant:</strong>
+                                    <div style={{ 
+                                        padding: '8px',
+                                        backgroundColor: '#e8f5e8',
+                                        borderRadius: '3px',
+                                        marginTop: '3px'
+                                    }}>
+                                        {message.answer}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                    <div ref={messagesEndRef} />
                 </div>
             )}
+            
+            {/* <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '5px' }}>
+                <h4>💡 Try asking about:</h4>
+                <ul style={{ fontSize: '14px', color: '#666' }}>
+                    <li>"What is my account balance?"</li>
+                    <li>"What is my transaction status?"</li>
+                    <li>"Is my card working?"</li>
+                    <li>"When will my deposit be available?"</li>
+                    <li>"What is my withdrawal limit?"</li>
+                    <li>"What is my interest rate?"</li>
+                    <li>"Are there any fees on my account?"</li>
+                    <li>"When is my statement available?"</li>
+                    <li>"When is my loan payment due?"</li>
+                    <li>"Is my account secure?"</li>
+                </ul>
+            </div> */}
         </div>
     );
 };
