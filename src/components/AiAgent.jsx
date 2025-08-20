@@ -10,6 +10,7 @@ const AiAgent = () => {
     const [error, setError] = useState('');
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [messageHistory, setMessageHistory] = useState([]); // Store conversation history
+    const [isAgentResponding, setIsAgentResponding] = useState(false); // Loading state for agent response
     const audioChunks = useRef([]); //  Buffer to store audio data
     const mediaRecorderRef = useRef(null); // Reference for MediaRecorder
     const streamRef = useRef(null); // Reference for the audio stream
@@ -321,6 +322,9 @@ const AiAgent = () => {
             // Add to message history immediately
             addToMessageHistory(transcript, null, timestamp);
             
+            // Show loading state
+            setIsAgentResponding(true);
+            
             // Add a longer delay for more natural conversation flow
             setTimeout(() => {
                 if (bankingAnswer) {
@@ -333,10 +337,9 @@ const AiAgent = () => {
                         )
                     );
                     
-                    // Speak the banking answer after a brief pause
-                    setTimeout(() => {
-                        speakTranscript(bankingAnswer);
-                    }, 500);
+                    // Hide loading and start speaking immediately
+                    setIsAgentResponding(false);
+                    speakTranscript(bankingAnswer);
                 } else {
                     // Get default response
                     const defaultResponse = getDefaultResponse(transcript);
@@ -350,10 +353,9 @@ const AiAgent = () => {
                         )
                     );
                     
-                    // Speak the default response after a brief pause
-                    setTimeout(() => {
-                        speakTranscript(defaultResponse);
-                    }, 500);
+                    // Hide loading and start speaking immediately
+                    setIsAgentResponding(false);
+                    speakTranscript(defaultResponse);
                 }
             }, 1500); // 1.5 second delay for more natural conversation flow
         }
@@ -367,6 +369,20 @@ const AiAgent = () => {
             flexDirection: 'column',
             height: '80vh'
         }}>
+            <style>
+                {`
+                    @keyframes pulse {
+                        0%, 80%, 100% {
+                            opacity: 0.3;
+                            transform: scale(0.8);
+                        }
+                        40% {
+                            opacity: 1;
+                            transform: scale(1);
+                        }
+                    }
+                `}
+            </style>
             
             {isProcessing && (
                 <div style={{ marginBottom: '10px', color: '#2196F3' }}>
@@ -470,6 +486,71 @@ const AiAgent = () => {
                         )}
                     </div>
                 ))}
+                
+                {/* Loading Indicator */}
+                {isAgentResponding && (
+                    <div style={{ 
+                        display: 'flex',
+                        justifyContent: 'flex-start',
+                        marginBottom: '20px'
+                    }}>
+                        <div style={{ 
+                            maxWidth: '70%',
+                            padding: '12px 16px',
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            borderRadius: '18px 18px 18px 4px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}>
+                            <span style={{ 
+                                fontSize: '12px', 
+                                backgroundColor: 'rgba(255,255,255,0.2)',
+                                padding: '2px 6px',
+                                borderRadius: '10px'
+                            }}>
+                                🏦 Banking Assistant
+                            </span>
+                            <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '4px',
+                                fontSize: '14px'
+                            }}>
+                                <span>Please wait, fetching results</span>
+                                <div style={{ 
+                                    display: 'flex', 
+                                    gap: '2px'
+                                }}>
+                                    <div style={{ 
+                                        width: '4px', 
+                                        height: '4px', 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '50%',
+                                        animation: 'pulse 1.4s ease-in-out infinite both'
+                                    }}></div>
+                                    <div style={{ 
+                                        width: '4px', 
+                                        height: '4px', 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '50%',
+                                        animation: 'pulse 1.4s ease-in-out infinite both 0.2s'
+                                    }}></div>
+                                    <div style={{ 
+                                        width: '4px', 
+                                        height: '4px', 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '50%',
+                                        animation: 'pulse 1.4s ease-in-out infinite both 0.4s'
+                                    }}></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
                 <div ref={messagesEndRef} />
             </div>
             
