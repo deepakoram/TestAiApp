@@ -304,7 +304,13 @@ const AiAgent = () => {
     }, [transcript]);
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ 
+            maxWidth: '800px', 
+            margin: '0 auto',
+            height: '80vh',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
             
             {isProcessing && (
                 <div style={{ marginBottom: '10px', color: '#2196F3' }}>
@@ -318,130 +324,121 @@ const AiAgent = () => {
                 </div>
             )}
 
-            {/* Message History */}
-            {messageHistory.length > 0 && (
-                <div style={{ 
-                    marginBottom: '20px',
-                    maxHeight: '600px',
-                    overflowY: 'auto',
-                    padding: '20px',
-                    backgroundColor: '#f5f5f5'
-                }}>
-                    
-                    {messageHistory.map((message, index) => (
-                        <div key={message.id} style={{ 
-                            marginBottom: '20px',
+            {/* Message History - Fixed Height */}
+            <div style={{ 
+                flex: 1,
+                overflowY: 'auto',
+                padding: '20px',
+                backgroundColor: '#f5f5f5',
+                minHeight: 0,
+                borderRadius: '10px'
+            }}>
+                
+                {messageHistory.map((message, index) => (
+                    <div key={message.id} style={{ 
+                        marginBottom: '20px',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}>
+                        {/* User Message - Right Side */}
+                        <div style={{ 
                             display: 'flex',
-                            flexDirection: 'column'
+                            justifyContent: 'flex-end',
+                            marginBottom: message.answer ? '8px' : '0'
                         }}>
-                            {/* User Message - Right Side */}
+                            <div style={{ 
+                                maxWidth: '70%',
+                                padding: '12px 16px',
+                                backgroundColor: '#2196F3',
+                                color: 'white',
+                                borderRadius: '18px 18px 4px 18px',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                position: 'relative'
+                            }}>
+                                <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
+                                    {message.question}
+                                </div>
+                                <div style={{ 
+                                    fontSize: '10px', 
+                                    opacity: 0.8, 
+                                    marginTop: '4px',
+                                    textAlign: 'right'
+                                }}>
+                                    {message.timestamp}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Agent Response - Left Side */}
+                        {message.answer && (
                             <div style={{ 
                                 display: 'flex',
-                                justifyContent: 'flex-end',
-                                marginBottom: message.answer ? '8px' : '0'
+                                justifyContent: 'flex-start'
                             }}>
                                 <div style={{ 
                                     maxWidth: '70%',
                                     padding: '12px 16px',
-                                    backgroundColor: '#2196F3',
+                                    backgroundColor: '#4CAF50',
                                     color: 'white',
-                                    borderRadius: '18px 18px 4px 18px',
+                                    borderRadius: '18px 18px 18px 4px',
                                     boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                                     position: 'relative'
                                 }}>
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        marginBottom: '4px'
+                                    }}>
+                                        <span style={{ 
+                                            fontSize: '12px', 
+                                            backgroundColor: 'rgba(255,255,255,0.2)',
+                                            padding: '2px 6px',
+                                            borderRadius: '10px',
+                                            marginRight: '8px'
+                                        }}>
+                                            🏦 Banking Assistant
+                                        </span>
+                                    </div>
                                     <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
-                                        {message.question}
+                                        {message.answer}
                                     </div>
                                     <div style={{ 
                                         fontSize: '10px', 
                                         opacity: 0.8, 
-                                        marginTop: '4px',
-                                        textAlign: 'right'
+                                        marginTop: '4px'
                                     }}>
                                         {message.timestamp}
                                     </div>
                                 </div>
                             </div>
-                            
-                            {/* Agent Response - Left Side */}
-                            {message.answer && (
-                                <div style={{ 
-                                    display: 'flex',
-                                    justifyContent: 'flex-start'
-                                }}>
-                                    <div style={{ 
-                                        maxWidth: '70%',
-                                        padding: '12px 16px',
-                                        backgroundColor: '#4CAF50',
-                                        color: 'white',
-                                        borderRadius: '18px 18px 18px 4px',
-                                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                                        position: 'relative'
-                                    }}>
-                                        <div style={{ 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            marginBottom: '4px'
-                                        }}>
-                                            <span style={{ 
-                                                fontSize: '12px', 
-                                                backgroundColor: 'rgba(255,255,255,0.2)',
-                                                padding: '2px 6px',
-                                                borderRadius: '10px',
-                                                marginRight: '8px'
-                                            }}>
-                                                🏦 Banking Assistant
-                                            </span>
-                                        </div>
-                                        <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
-                                            {message.answer}
-                                        </div>
-                                        <div style={{ 
-                                            fontSize: '10px', 
-                                            opacity: 0.8, 
-                                            marginTop: '4px'
-                                        }}>
-                                            {message.timestamp}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                </div>
-            )}
-              <div style={{ marginBottom: '20px' }}>
+                        )}
+                    </div>
+                ))}
+                <div ref={messagesEndRef} />
+            </div>
+            
+            {/* Footer with Control Buttons */}
+            <div style={{ 
+                padding: '20px',
+                backgroundColor: 'white',
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '10px'
+            }}>
                 <button 
-                    onClick={startRecording} 
-                    disabled={isRecording || isProcessing || isSpeaking}
+                    onClick={isRecording ? stopRecording : startRecording} 
+                    disabled={isProcessing || isSpeaking}
                     style={{
                         padding: '10px 20px',
-                        marginRight: '10px',
                         backgroundColor: isRecording ? '#ff4444' : (isSpeaking ? '#cccccc' : '#4CAF50'),
                         color: 'white',
                         border: 'none',
                         borderRadius: '5px',
-                        cursor: (isRecording || isProcessing || isSpeaking) ? 'not-allowed' : 'pointer'
+                        cursor: (isProcessing || isSpeaking) ? 'not-allowed' : 'pointer',
+                        minWidth: '80px'
                     }}
                 >
-                    {isRecording ? 'Recording...' : (isSpeaking ? 'Speaking...' : 'Start Recording')}
-                </button>
-                
-                <button 
-                    onClick={stopRecording} 
-                    disabled={!isRecording || isProcessing}
-                    style={{
-                        padding: '10px 20px',
-                        marginRight: '10px',
-                        backgroundColor: !isRecording ? '#cccccc' : '#ff4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: !isRecording || isProcessing ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    Stop Recording
+                    {isRecording ? 'Stop' : (isSpeaking ? 'Spk...' : 'Start')}
                 </button>
 
                 {messageHistory.length > 0 && (
@@ -457,7 +454,7 @@ const AiAgent = () => {
                             cursor: isSpeaking ? 'not-allowed' : 'pointer'
                         }}
                     >
-                        Clear History
+                        Clear
                     </button>
                 )}
             </div>
