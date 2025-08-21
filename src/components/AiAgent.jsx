@@ -1,4 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import mic_icon from '../assets/mic.svg';
+import mute_icon from '../assets/mute.svg';
+import cross_icon from '../assets/cross.svg';
+import Itro from './Itro';
 
 const AiAgent = () => {
     //  State to manage recording status and transcribed text
@@ -8,11 +12,16 @@ const AiAgent = () => {
     const [error, setError] = useState('');
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [messageHistory, setMessageHistory] = useState([]); // Store conversation history
+    const [isAgentResponding, setIsAgentResponding] = useState(false); // Loading state for agent response
+    const [isMuted, setIsMuted] = useState(false); // Mute state
+    const [isTransportReady, setIsTransportReady] = useState(false); // State for gradient ready effect
+    const [isToolCallInProgress, setIsToolCallInProgress] = useState(false); // State for tool calling effect
     const audioChunks = useRef([]); //  Buffer to store audio data
     const mediaRecorderRef = useRef(null); // Reference for MediaRecorder
     const streamRef = useRef(null); // Reference for the audio stream
     const speechRef = useRef(null); // Reference for speech synthesis
     const messagesEndRef = useRef(null); // Reference for auto-scroll
+    const liveGradientRef = useRef(null); // Reference for live gradient div
     console.log(transcript, 'transcript');
 
     // Auto-scroll to bottom of messages
@@ -23,6 +32,15 @@ const AiAgent = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messageHistory]);
+
+    // Effect to control gradient states based on component state
+    useEffect(() => {
+        // Set transport ready when component is mounted and ready
+        setIsTransportReady(true);
+        
+        // Set tool calling state when processing or agent is responding
+        setIsToolCallInProgress(isProcessing || isAgentResponding);
+    }, [isProcessing, isAgentResponding]);
 
     // Banking Q&A Database
     const bankingQA = [
@@ -92,6 +110,31 @@ const AiAgent = () => {
         return null;
     };
 
+    // Function to get default response when no banking answer is found
+    const getDefaultResponse = (transcript) => {
+        const lowerTranscript = transcript.toLowerCase();
+        
+        // Check for common non-banking phrases and provide appropriate responses
+        if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi') || lowerTranscript.includes('hey')) {
+            return "Hello! I'm your AI banking assistant. How can I help you with your banking needs today? You can ask me about your account balance, transactions, card status, and more.";
+        }
+        
+        if (lowerTranscript.includes('thank') || lowerTranscript.includes('thanks')) {
+            return "You're welcome! I'm here to help with all your banking questions. Feel free to ask me anything about your accounts, transactions, or banking services.";
+        }
+        
+        if (lowerTranscript.includes('bye') || lowerTranscript.includes('goodbye')) {
+            return "Goodbye! Thank you for using our AI banking assistant. Have a great day!";
+        }
+        
+        if (lowerTranscript.includes('help') || lowerTranscript.includes('what can you do')) {
+            return "I can help you with various banking tasks! You can ask me about your account balance, transaction status, card information, deposit availability, withdrawal limits, interest rates, account fees, statement availability, loan payments, and account security. Just ask me any banking-related question!";
+        }
+        
+        // Default response for unrecognized questions
+        return "I understand you said: '" + transcript + "'. I'm specifically designed to help with banking-related questions. You can ask me about your account balance, transactions, card status, deposits, withdrawals, interest rates, fees, statements, loans, or account security. How can I assist you with your banking needs?";
+    };
+
     // Function to add message to history
     const addToMessageHistory = (question, answer, timestamp) => {
         const newMessage = {
@@ -110,7 +153,7 @@ const AiAgent = () => {
     };
 
     // TTS function to read the transcript using ElevenLabs
-    const speakTranscript = async (textToSpeak = null) => {
+    const speakTranscript = async (textToSpeak = null, onStartSpeaking = () => {}) => {
         const text = textToSpeak || transcript;
         if (!text) return;
         
@@ -150,13 +193,36 @@ const AiAgent = () => {
 
             if (!response.ok) {
                 const errorData = await response.text();
-                throw new Error(`ElevenLabs TTS API request failed: ${response.status} ${response.statusText} - ${errorData}`);
+                let errorMessage = 'Unknown error occurred';
+                
+                // Handle specific error codes
+                if (response.status === 500) {
+                    errorMessage = 'ElevenLabs service is temporarily unavailable. Please try again in a few moments.';
+                } else if (response.status === 503) {
+                    errorMessage = 'ElevenLabs service is under maintenance. Please try again later.';
+                } else if (response.status === 429) {
+                    errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
+                } else if (response.status === 401) {
+                    errorMessage = 'Invalid API key. Please check your ElevenLabs API configuration.';
+                } else if (response.status === 400) {
+                    errorMessage = 'Invalid request. Please check your input and try again.';
+                } else if (response.status >= 500) {
+                    errorMessage = 'ElevenLabs server error. Our team has been notified. Please try again shortly.';
+                } else {
+                    errorMessage = `ElevenLabs API error (${response.status}): ${errorData}`;
+                }
+                
+                throw new Error(errorMessage);
             }
 
             const audioBlob = await response.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
             
             const audio = new Audio(audioUrl);
+            
+            // Set volume based on mute state
+            audio.volume = isMuted ? 0 : 1;
+            
             audio.onended = () => {
                 setIsSpeaking(false);
                 speechRef.current = null;
@@ -167,17 +233,40 @@ const AiAgent = () => {
                 console.error('Audio playback error:', error);
                 setIsSpeaking(false);
                 speechRef.current = null;
-                setError('Error playing audio. Please try again.');
+                setError('Audio playback failed. Please try again.');
                 URL.revokeObjectURL(audioUrl);
             };
             
             speechRef.current = audio;
             await audio.play();
+            onStartSpeaking(); // Call the callback when speech starts
             
         } catch (error) {
             console.error('Error with ElevenLabs TTS:', error);
-            setError(`Error generating speech: ${error.message}`);
+            
+            // Handle network errors
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                setError('Network error: Unable to connect to ElevenLabs. Please check your internet connection and try again.');
+            } else if (error.message.includes('timeout')) {
+                setError('Request timeout: ElevenLabs service is taking longer than expected. Please try again.');
+            } else {
+                setError(error.message);
+            }
+            
             setIsSpeaking(false);
+            
+            // Show the message even if TTS fails
+            onStartSpeaking();
+        }
+    };
+
+    // Mute toggle function
+    const toggleMute = () => {
+        setIsMuted(!isMuted);
+        
+        // If currently speaking, update the volume immediately
+        if (speechRef.current) {
+            speechRef.current.volume = !isMuted ? 0 : 1;
         }
     };
 
@@ -266,7 +355,26 @@ const AiAgent = () => {
 
             if (!response.ok) {
                 const errorData = await response.text();
-                throw new Error(`ElevenLabs STT API request failed: ${response.status} ${response.statusText} - ${errorData}`);
+                let errorMessage = 'Unknown error occurred';
+                
+                // Handle specific error codes for STT
+                if (response.status === 500) {
+                    errorMessage = 'Speech recognition service is temporarily unavailable. Please try again in a few moments.';
+                } else if (response.status === 503) {
+                    errorMessage = 'Speech recognition service is under maintenance. Please try again later.';
+                } else if (response.status === 429) {
+                    errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
+                } else if (response.status === 401) {
+                    errorMessage = 'Invalid API key. Please check your ElevenLabs API configuration.';
+                } else if (response.status === 400) {
+                    errorMessage = 'Invalid audio format. Please try recording again.';
+                } else if (response.status >= 500) {
+                    errorMessage = 'Speech recognition server error. Please try again shortly.';
+                } else {
+                    errorMessage = `Speech recognition error (${response.status}): ${errorData}`;
+                }
+                
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -275,11 +383,19 @@ const AiAgent = () => {
                 setTranscript(data.text); //  Update the transcript state with the received text
                 console.log("ElevenLabs transcription:", data.text);
             } else {
-                setError('No transcription received from the API');
+                setError('No speech detected. Please try speaking more clearly or check your microphone.');
             }
         } catch (error) {
             console.error('Error sending audio to ElevenLabs:', error);
-            setError(`Error processing audio: ${error.message}`);
+            
+            // Handle network errors for STT
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                setError('Network error: Unable to connect to speech recognition service. Please check your internet connection and try again.');
+            } else if (error.message.includes('timeout')) {
+                setError('Request timeout: Speech recognition is taking longer than expected. Please try again.');
+            } else {
+                setError(error.message);
+            }
         } finally {
             setIsProcessing(false);
         }
@@ -291,49 +407,103 @@ const AiAgent = () => {
             const bankingAnswer = findBankingAnswer(transcript);
             const timestamp = new Date().toLocaleString();
             
-            // Add to message history
-            addToMessageHistory(transcript, bankingAnswer, timestamp);
+            // Add to message history immediately
+            addToMessageHistory(transcript, null, timestamp);
             
-            if (bankingAnswer) {
-                // Automatically speak the banking answer
-                setTimeout(() => {
-                    speakTranscript(bankingAnswer);
-                }, 1000); // Small delay to ensure transcript is set
-            }
+            // Show loading state
+            setIsAgentResponding(true);
+            
+            // Add a longer delay for more natural conversation flow
+            setTimeout(() => {
+                if (bankingAnswer) {
+                    // Start speaking first, then show message when speech starts
+                    speakTranscript(bankingAnswer, () => {
+                        // Callback when speech starts - show the message
+                        setMessageHistory(prev => 
+                            prev.map(msg => 
+                                msg.timestamp === timestamp 
+                                    ? { ...msg, answer: bankingAnswer, isBankingQuestion: true }
+                                    : msg
+                            )
+                        );
+                        setIsAgentResponding(false);
+                    });
+                } else {
+                    // Get default response
+                    const defaultResponse = getDefaultResponse(transcript);
+                    
+                    // Start speaking first, then show message when speech starts
+                    speakTranscript(defaultResponse, () => {
+                        // Callback when speech starts - show the message
+                        setMessageHistory(prev => 
+                            prev.map(msg => 
+                                msg.timestamp === timestamp 
+                                    ? { ...msg, answer: defaultResponse, isBankingQuestion: false }
+                                    : msg
+                            )
+                        );
+                        setIsAgentResponding(false);
+                    });
+                }
+            }, 1500); // 1.5 second delay for more natural conversation flow
         }
     }, [transcript]);
 
     return (
         <div style={{ 
-            maxWidth: '800px', 
+            width: '100%', 
             margin: '0 auto',
-            height: '80vh',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            flex: 1,
         }}>
+            <style>
+                {`
+                    @keyframes pulse {
+                        0%, 80%, 100% {
+                            opacity: 0.3;
+                            transform: scale(0.8);
+                        }
+                        40% {
+                            opacity: 1;
+                            transform: scale(1);
+                        }
+                    }
+                `}
+            </style>
             
-            {isProcessing && (
+            {/* {isProcessing && (
                 <div style={{ marginBottom: '10px', color: '#2196F3' }}>
                     Processing audio...
                 </div>
-            )}
+            )} */}
+            
             
             {error && (
                 <div style={{ marginBottom: '10px', color: '#f44336', padding: '10px', backgroundColor: '#ffebee', borderRadius: '5px' }}>
                     {error}
                 </div>
             )}
+            {messageHistory.length === 0 ? 
+                <Itro/>
+                :
+                <></>
+            }
 
             {/* Message History - Fixed Height */}
+            {messageHistory.length > 0 &&              
             <div style={{ 
                 flex: 1,
                 overflowY: 'auto',
                 padding: '20px',
-                backgroundColor: '#f5f5f5',
+                // backgroundColor: '#f5f5f5',
                 minHeight: 0,
-                borderRadius: '10px'
-            }}>
+                borderRadius: '10px',
+                overflow: 'scroll'
                 
+            }}>
+               
+               
                 {messageHistory.map((message, index) => (
                     <div key={message.id} style={{ 
                         marginBottom: '20px',
@@ -349,7 +519,7 @@ const AiAgent = () => {
                             <div style={{ 
                                 maxWidth: '70%',
                                 padding: '12px 16px',
-                                backgroundColor: '#2196F3',
+                                backgroundColor: '#1364ff',
                                 color: 'white',
                                 borderRadius: '18px 18px 4px 18px',
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
@@ -378,7 +548,7 @@ const AiAgent = () => {
                                 <div style={{ 
                                     maxWidth: '70%',
                                     padding: '12px 16px',
-                                    backgroundColor: '#4CAF50',
+                                    backgroundColor: '#1B2339',
                                     color: 'white',
                                     borderRadius: '18px 18px 18px 4px',
                                     boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
@@ -414,49 +584,160 @@ const AiAgent = () => {
                         )}
                     </div>
                 ))}
+                
+               
+                
+                {/* Loading Indicator */}
+                {isAgentResponding && (
+                    <div style={{ 
+                        display: 'flex',
+                        justifyContent: 'flex-start',
+                        marginBottom: '20px'
+                    }}>
+                        <div style={{ 
+                            maxWidth: '70%',
+                            padding: '12px 16px',
+                            backgroundColor: '#1B2339',
+                            color: 'white',
+                            borderRadius: '18px 18px 18px 4px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}>
+                            <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '4px',
+                                fontSize: '14px'
+                            }}>
+                                <span>Fetching results</span>
+                                <div style={{ 
+                                    display: 'flex', 
+                                    gap: '2px'
+                                }}>
+                                    <div style={{ 
+                                        width: '4px', 
+                                        height: '4px', 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '50%',
+                                        animation: 'pulse 1.4s ease-in-out infinite both'
+                                    }}></div>
+                                    <div style={{ 
+                                        width: '4px', 
+                                        height: '4px', 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '50%',
+                                        animation: 'pulse 1.4s ease-in-out infinite both 0.2s'
+                                    }}></div>
+                                    <div style={{ 
+                                        width: '4px', 
+                                        height: '4px', 
+                                        backgroundColor: 'white', 
+                                        borderRadius: '50%',
+                                        animation: 'pulse 1.4s ease-in-out infinite both 0.4s'
+                                    }}></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
                 <div ref={messagesEndRef} />
-            </div>
+            </div>}
             
             {/* Footer with Control Buttons */}
             <div style={{ 
                 padding: '20px',
                 backgroundColor: 'white',
                 display: 'flex',
-                justifyContent: 'center',
-                gap: '10px'
+                justifyContent: 'space-evenly',
+                alignItems: 'end',
+                gap: '10px',
+                backgroundColor: '#010823',
+                // height:"150px",
+                // background: 'linear-gradient(to bottom, #010823, #1364ff)'
+
             }}>
+                <button 
+                    onClick={toggleMute} 
+                    style={{
+                        padding: '10px 20px',
+                        backgroundColor: (isMuted ? '#cccccc' : '#1B2339'),
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 50,
+                        cursor: 'pointer',
+                        width: '55px',
+                        height: '55px'
+                    }}
+                >
+                    <img src={mute_icon} alt="mic" style={{ width: '20px', height: '20px' }} />    
+                </button>
+
                 <button 
                     onClick={isRecording ? stopRecording : startRecording} 
                     disabled={isProcessing || isSpeaking}
                     style={{
                         padding: '10px 20px',
-                        backgroundColor: isRecording ? '#ff4444' : (isSpeaking ? '#cccccc' : '#4CAF50'),
+                        backgroundColor: isRecording ?'#1364ff'  : (isSpeaking ? '#cccccc' : '#1B2339'),
                         color: 'white',
                         border: 'none',
-                        borderRadius: '5px',
+                        borderRadius: 50,
                         cursor: (isProcessing || isSpeaking) ? 'not-allowed' : 'pointer',
-                        minWidth: '80px'
+                        width: '65px',
+                        height: '65px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                     }}
                 >
-                    {isRecording ? 'Stop' : (isSpeaking ? 'Spk...' : 'Start')}
+                    {isRecording ? <img src={mic_icon} alt="mic" style={{ width: '20px', height: '20px' }} /> : (isSpeaking ? <img src={mic_icon} alt="mic" style={{ width: '20px', height: '20px' }} /> : 
+                        <img src={mic_icon} alt="mic" style={{ width: '20px', height: '20px' }} />
+                        )}
                 </button>
 
-                {messageHistory.length > 0 && (
+                {/* {messageHistory.length > 0 && ( */}
                     <button 
                         onClick={clearMessageHistory}
                         disabled={isSpeaking}
                         style={{
                             padding: '10px 20px',
-                            backgroundColor: isSpeaking ? '#cccccc' : '#f44336',
+                            backgroundColor: isSpeaking ? '#cccccc' : '#1B2339',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '5px',
-                            cursor: isSpeaking ? 'not-allowed' : 'pointer'
+                            borderRadius: 50,
+                            cursor: isSpeaking ? 'not-allowed' : 'pointer',
+                            width: '55px',
+                            height: '55px'
                         }}
                     >
-                        Clear
+                        <img src={cross_icon} alt="cross" style={{ width: '20px', height: '20px' }} />
                     </button>
-                )}
+                {/* )} */}
+            </div>
+            
+            {/* Live Gradient Effect */}
+            <div
+                ref={liveGradientRef}
+                className={`fixed bottom-[-110px] left-1/2 transform -translate-x-1/2 w-[150%] h-[370px] transition-all duration-150 ease-out z-[1] pointer-events-none blur-[30px] opacity-40 ${
+                    isTransportReady ? 'opacity-100' : 'opacity-40'
+                } ${
+                    isToolCallInProgress ? 'before:opacity-100' : 'before:opacity-0'
+                }`}
+                style={{
+                    background: isTransportReady 
+                        ? 'radial-gradient(ellipse at bottom, #1364ff 0%, transparent 70%)'
+                        : 'radial-gradient(ellipse at bottom, #010823 0%, transparent 80%)'
+                }}
+            >
+                <div 
+                    className="absolute inset-0 transition-opacity duration-500 ease-in-out"
+                    style={{
+                        background: 'radial-gradient(ellipse at bottom, #010823 0%, transparent 70%)',
+                        opacity: isToolCallInProgress ? 1 : 0
+                    }}
+                ></div>
             </div>
         </div>
     );
