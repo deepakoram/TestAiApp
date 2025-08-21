@@ -58,7 +58,7 @@ export default function App() {
       <div className="min-h-[100dvh] flex flex-col justify-center bg-white text-gray-900">
         {/* Header */}
         <header className="pt-[var(--safe-top)] px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-center border-b">
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">MWeb Starter</h1>
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">MWeb Starter</h1>
         </header>
 
         {/* Main content */}
@@ -76,10 +76,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col justify-center bg-[#1c1c1c] text-gray-900">
+    <div className="min-h-[100dvh] flex flex-col justify-center bg-[#010823] text-gray-900">
       {/* Header - responsive with different layouts */}
       <header className="pt-[var(--safe-top)] px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between border-b">
-        <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">MWeb Starter</h1>
+        <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">MWeb Starter</h1>
         <div className="flex items-center space-x-3">
           <span className="text-sm text-gray-600 hidden sm:block">
             Welcome, {user.name}

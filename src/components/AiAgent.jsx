@@ -180,7 +180,26 @@ const AiAgent = () => {
 
             if (!response.ok) {
                 const errorData = await response.text();
-                throw new Error(`ElevenLabs TTS API request failed: ${response.status} ${response.statusText} - ${errorData}`);
+                let errorMessage = 'Unknown error occurred';
+                
+                // Handle specific error codes
+                if (response.status === 500) {
+                    errorMessage = 'ElevenLabs service is temporarily unavailable. Please try again in a few moments.';
+                } else if (response.status === 503) {
+                    errorMessage = 'ElevenLabs service is under maintenance. Please try again later.';
+                } else if (response.status === 429) {
+                    errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
+                } else if (response.status === 401) {
+                    errorMessage = 'Invalid API key. Please check your ElevenLabs API configuration.';
+                } else if (response.status === 400) {
+                    errorMessage = 'Invalid request. Please check your input and try again.';
+                } else if (response.status >= 500) {
+                    errorMessage = 'ElevenLabs server error. Our team has been notified. Please try again shortly.';
+                } else {
+                    errorMessage = `ElevenLabs API error (${response.status}): ${errorData}`;
+                }
+                
+                throw new Error(errorMessage);
             }
 
             const audioBlob = await response.blob();
@@ -201,7 +220,7 @@ const AiAgent = () => {
                 console.error('Audio playback error:', error);
                 setIsSpeaking(false);
                 speechRef.current = null;
-                setError('Error playing audio. Please try again.');
+                setError('Audio playback failed. Please try again.');
                 URL.revokeObjectURL(audioUrl);
             };
             
@@ -211,8 +230,20 @@ const AiAgent = () => {
             
         } catch (error) {
             console.error('Error with ElevenLabs TTS:', error);
-            setError(`Error generating speech: ${error.message}`);
+            
+            // Handle network errors
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                setError('Network error: Unable to connect to ElevenLabs. Please check your internet connection and try again.');
+            } else if (error.message.includes('timeout')) {
+                setError('Request timeout: ElevenLabs service is taking longer than expected. Please try again.');
+            } else {
+                setError(error.message);
+            }
+            
             setIsSpeaking(false);
+            
+            // Show the message even if TTS fails
+            onStartSpeaking();
         }
     };
 
@@ -311,7 +342,26 @@ const AiAgent = () => {
 
             if (!response.ok) {
                 const errorData = await response.text();
-                throw new Error(`ElevenLabs STT API request failed: ${response.status} ${response.statusText} - ${errorData}`);
+                let errorMessage = 'Unknown error occurred';
+                
+                // Handle specific error codes for STT
+                if (response.status === 500) {
+                    errorMessage = 'Speech recognition service is temporarily unavailable. Please try again in a few moments.';
+                } else if (response.status === 503) {
+                    errorMessage = 'Speech recognition service is under maintenance. Please try again later.';
+                } else if (response.status === 429) {
+                    errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
+                } else if (response.status === 401) {
+                    errorMessage = 'Invalid API key. Please check your ElevenLabs API configuration.';
+                } else if (response.status === 400) {
+                    errorMessage = 'Invalid audio format. Please try recording again.';
+                } else if (response.status >= 500) {
+                    errorMessage = 'Speech recognition server error. Please try again shortly.';
+                } else {
+                    errorMessage = `Speech recognition error (${response.status}): ${errorData}`;
+                }
+                
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -320,11 +370,19 @@ const AiAgent = () => {
                 setTranscript(data.text); //  Update the transcript state with the received text
                 console.log("ElevenLabs transcription:", data.text);
             } else {
-                setError('No transcription received from the API');
+                setError('No speech detected. Please try speaking more clearly or check your microphone.');
             }
         } catch (error) {
             console.error('Error sending audio to ElevenLabs:', error);
-            setError(`Error processing audio: ${error.message}`);
+            
+            // Handle network errors for STT
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                setError('Network error: Unable to connect to speech recognition service. Please check your internet connection and try again.');
+            } else if (error.message.includes('timeout')) {
+                setError('Request timeout: Speech recognition is taking longer than expected. Please try again.');
+            } else {
+                setError(error.message);
+            }
         } finally {
             setIsProcessing(false);
         }
@@ -384,7 +442,7 @@ const AiAgent = () => {
             margin: '0 auto',
             display: 'flex',
             flexDirection: 'column',
-            height: '86vh'
+            height: '88vh'
         }}>
             <style>
                 {`
@@ -438,7 +496,7 @@ const AiAgent = () => {
                             <div style={{ 
                                 maxWidth: '70%',
                                 padding: '12px 16px',
-                                backgroundColor: '#2196F3',
+                                backgroundColor: '#1364ff',
                                 color: 'white',
                                 borderRadius: '18px 18px 4px 18px',
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
@@ -467,7 +525,7 @@ const AiAgent = () => {
                                 <div style={{ 
                                     maxWidth: '70%',
                                     padding: '12px 16px',
-                                    backgroundColor: '#4CAF50',
+                                    backgroundColor: '#1B2339',
                                     color: 'white',
                                     borderRadius: '18px 18px 18px 4px',
                                     boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
@@ -514,7 +572,7 @@ const AiAgent = () => {
                         <div style={{ 
                             maxWidth: '70%',
                             padding: '12px 16px',
-                            backgroundColor: '#4CAF50',
+                            backgroundColor: '#1B2339',
                             color: 'white',
                             borderRadius: '18px 18px 18px 4px',
                             boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
@@ -522,21 +580,13 @@ const AiAgent = () => {
                             alignItems: 'center',
                             gap: '8px'
                         }}>
-                            <span style={{ 
-                                fontSize: '12px', 
-                                backgroundColor: 'rgba(255,255,255,0.2)',
-                                padding: '2px 6px',
-                                borderRadius: '10px'
-                            }}>
-                                🏦 Banking Assistant
-                            </span>
                             <div style={{ 
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 gap: '4px',
                                 fontSize: '14px'
                             }}>
-                                <span>Please wait, fetching results</span>
+                                <span>Fetching results</span>
                                 <div style={{ 
                                     display: 'flex', 
                                     gap: '2px'
@@ -579,15 +629,16 @@ const AiAgent = () => {
                 justifyContent: 'space-evenly',
                 alignItems: 'end',
                 gap: '10px',
-                backgroundColor: '#1c1c1c'
-                // background: 'linear-gradient(to bottom, #1c1c1c, #756d31)'
+                backgroundColor: '#010823',
+                // height:"150px",
+                // background: 'linear-gradient(to bottom, #010823, #1364ff)'
 
             }}>
                 <button 
                     onClick={toggleMute} 
                     style={{
                         padding: '10px 20px',
-                        backgroundColor: (isMuted ? '#cccccc' : '#f44336'),
+                        backgroundColor: (isMuted ? '#cccccc' : '#1B2339'),
                         color: 'white',
                         border: 'none',
                         borderRadius: 50,
@@ -604,7 +655,7 @@ const AiAgent = () => {
                     disabled={isProcessing || isSpeaking}
                     style={{
                         padding: '10px 20px',
-                        backgroundColor: isRecording ? '#ff4444' : (isSpeaking ? '#cccccc' : '#4CAF50'),
+                        backgroundColor: isRecording ?'#4CAF50'  : (isSpeaking ? '#cccccc' : '#1B2339'),
                         color: 'white',
                         border: 'none',
                         borderRadius: 50,
@@ -627,7 +678,7 @@ const AiAgent = () => {
                         disabled={isSpeaking}
                         style={{
                             padding: '10px 20px',
-                            backgroundColor: isSpeaking ? '#cccccc' : '#f44336',
+                            backgroundColor: isSpeaking ? '#cccccc' : '#1B2339',
                             color: 'white',
                             border: 'none',
                             borderRadius: 50,
