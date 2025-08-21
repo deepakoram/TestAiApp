@@ -138,7 +138,7 @@ const AiAgent = () => {
     };
 
     // TTS function to read the transcript using ElevenLabs
-    const speakTranscript = async (textToSpeak = null) => {
+    const speakTranscript = async (textToSpeak = null, onStartSpeaking = () => {}) => {
         const text = textToSpeak || transcript;
         if (!text) return;
         
@@ -201,6 +201,7 @@ const AiAgent = () => {
             
             speechRef.current = audio;
             await audio.play();
+            onStartSpeaking(); // Call the callback when speech starts
             
         } catch (error) {
             console.error('Error with ElevenLabs TTS:', error);
@@ -328,34 +329,34 @@ const AiAgent = () => {
             // Add a longer delay for more natural conversation flow
             setTimeout(() => {
                 if (bankingAnswer) {
-                    // Update the message with banking answer
-                    setMessageHistory(prev => 
-                        prev.map(msg => 
-                            msg.timestamp === timestamp 
-                                ? { ...msg, answer: bankingAnswer, isBankingQuestion: true }
-                                : msg
-                        )
-                    );
-                    
-                    // Hide loading and start speaking immediately
-                    setIsAgentResponding(false);
-                    speakTranscript(bankingAnswer);
+                    // Start speaking first, then show message when speech starts
+                    speakTranscript(bankingAnswer, () => {
+                        // Callback when speech starts - show the message
+                        setMessageHistory(prev => 
+                            prev.map(msg => 
+                                msg.timestamp === timestamp 
+                                    ? { ...msg, answer: bankingAnswer, isBankingQuestion: true }
+                                    : msg
+                            )
+                        );
+                        setIsAgentResponding(false);
+                    });
                 } else {
                     // Get default response
                     const defaultResponse = getDefaultResponse(transcript);
                     
-                    // Update the message with default answer
-                    setMessageHistory(prev => 
-                        prev.map(msg => 
-                            msg.timestamp === timestamp 
-                                ? { ...msg, answer: defaultResponse, isBankingQuestion: false }
-                                : msg
-                        )
-                    );
-                    
-                    // Hide loading and start speaking immediately
-                    setIsAgentResponding(false);
-                    speakTranscript(defaultResponse);
+                    // Start speaking first, then show message when speech starts
+                    speakTranscript(defaultResponse, () => {
+                        // Callback when speech starts - show the message
+                        setMessageHistory(prev => 
+                            prev.map(msg => 
+                                msg.timestamp === timestamp 
+                                    ? { ...msg, answer: defaultResponse, isBankingQuestion: false }
+                                    : msg
+                            )
+                        );
+                        setIsAgentResponding(false);
+                    });
                 }
             }, 1500); // 1.5 second delay for more natural conversation flow
         }
