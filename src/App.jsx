@@ -57,9 +57,9 @@ export default function App() {
     return (
       <div className="min-h-[100dvh] flex flex-col justify-center bg-white text-gray-900">
         {/* Header */}
-        <header className="pt-[var(--safe-top)] px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-center border-b">
+        {/* <header className="pt-[var(--safe-top)] px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-center border-b">
           <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">MWeb Starter</h1>
-        </header>
+        </header> */}
 
         {/* Main content */}
         <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 flex items-center justify-center">
@@ -79,7 +79,7 @@ export default function App() {
     <div className="min-h-[100dvh] flex flex-col justify-center bg-[#010823] text-gray-900">
       {/* Header - responsive with different layouts */}
       <header className="pt-[var(--safe-top)] px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between border-b">
-        <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">MWeb Starter</h1>
+        <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">TEST</h1>
         <div className="flex items-center space-x-3">
           <span className="text-sm text-gray-600 hidden sm:block">
             Welcome, {user.name}
@@ -93,32 +93,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main content - responsive padding and max-width */}
-      <main className="flex-1 overflow-auto sm:p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto">
-          {tab === "home" && <Home user={user} />}
-          {/* {tab === "search" && <Search />} */}
-          {tab === "speech" && <SpeechToText />}
-          {tab === "profile" && <Profile user={user} />}
-          {tab === "ai" && <AiAgent />}
-        </div>
-      </main>
-
-      {/* Navigation - responsive with different layouts */}
-      <nav
-        className="border-t px-4 sm:px-6 lg:px-8"
-        style={{ paddingBottom: "max(0px, var(--safe-bottom))" }}
-      >
-        <div className="max-w-4xl mx-auto">
-          <div className="h-14 sm:h-16 grid grid-cols-4 items-center">
-            <Tab label="Home" active={tab === "home"} onClick={() => setTab("home")} />
-            {/* <Tab label="Search" active={tab === "search"} onClick={() => setTab("search")} /> */}
-            <Tab label="Speech" active={tab === "speech"} onClick={() => setTab("speech")} />
-            <Tab label="Profile" active={tab === "profile"} onClick={() => setTab("profile")} />
-            <Tab label="AI" active={tab === "ai"} onClick={() => setTab("ai")} />
-          </div>
-        </div>
-      </nav>
+     <AiAgent/>
     </div>
   );
 }
@@ -139,45 +114,7 @@ function Tab({ label, active, onClick }) {
 
 function Home({ user }) {
   return (
-    <section className="space-y-4 sm:space-y-6">
-      {/* Welcome message */}
-      <div className="bg-gradient-to-r from-sky-50 to-indigo-50 rounded-2xl p-6 border">
-        <h2 className="text-xl font-semibold mb-3">Welcome back, {user.name}! 👋</h2>
-        <p className="text-gray-600 leading-relaxed">
-          You're successfully logged in with email: <code className="bg-sky-100 px-1 rounded">{user.email}</code>
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <Card 
-          title="Fast" 
-          body="Vite + React + Tailwind with optimized performance." 
-          icon="⚡"
-        />
-        <Card 
-          title="Responsive" 
-          body="Mobile-first design that scales beautifully across all devices." 
-          icon="📱"
-        />
-        <Card 
-          title="Modern" 
-          body="Built with the latest web technologies and best practices." 
-          icon="🚀"
-        />
-      </div>
-      
-      {/* Additional content for larger screens */}
-      <div className="hidden lg:block">
-        <div className="bg-gradient-to-r from-sky-50 to-indigo-50 rounded-2xl p-6 border">
-          <h2 className="text-xl font-semibold mb-3">Welcome to MWeb Starter</h2>
-          <p className="text-gray-600 leading-relaxed">
-            This is a responsive React application built with Vite and Tailwind CSS. 
-            The layout adapts seamlessly from mobile phones to desktop screens, 
-            providing an optimal user experience across all devices.
-          </p>
-        </div>
-      </div>
-    </section>
+    <AiAgent/>
   );
 }
 

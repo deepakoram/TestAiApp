@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import mic_icon from '../assets/mic.svg';
 import mute_icon from '../assets/mute.svg';
 import cross_icon from '../assets/cross.svg';
+import Itro from './Itro';
 
 const AiAgent = () => {
     //  State to manage recording status and transcribed text
@@ -13,11 +14,14 @@ const AiAgent = () => {
     const [messageHistory, setMessageHistory] = useState([]); // Store conversation history
     const [isAgentResponding, setIsAgentResponding] = useState(false); // Loading state for agent response
     const [isMuted, setIsMuted] = useState(false); // Mute state
+    const [isTransportReady, setIsTransportReady] = useState(false); // State for gradient ready effect
+    const [isToolCallInProgress, setIsToolCallInProgress] = useState(false); // State for tool calling effect
     const audioChunks = useRef([]); //  Buffer to store audio data
     const mediaRecorderRef = useRef(null); // Reference for MediaRecorder
     const streamRef = useRef(null); // Reference for the audio stream
     const speechRef = useRef(null); // Reference for speech synthesis
     const messagesEndRef = useRef(null); // Reference for auto-scroll
+    const liveGradientRef = useRef(null); // Reference for live gradient div
     console.log(transcript, 'transcript');
 
     // Auto-scroll to bottom of messages
@@ -28,6 +32,15 @@ const AiAgent = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messageHistory]);
+
+    // Effect to control gradient states based on component state
+    useEffect(() => {
+        // Set transport ready when component is mounted and ready
+        setIsTransportReady(true);
+        
+        // Set tool calling state when processing or agent is responding
+        setIsToolCallInProgress(isProcessing || isAgentResponding);
+    }, [isProcessing, isAgentResponding]);
 
     // Banking Q&A Database
     const bankingQA = [
@@ -438,11 +451,11 @@ const AiAgent = () => {
 
     return (
         <div style={{ 
-            maxWidth: '800px', 
+            width: '100%', 
             margin: '0 auto',
             display: 'flex',
             flexDirection: 'column',
-            height: '88vh'
+            flex: 1,
         }}>
             <style>
                 {`
@@ -459,28 +472,38 @@ const AiAgent = () => {
                 `}
             </style>
             
-            {isProcessing && (
+            {/* {isProcessing && (
                 <div style={{ marginBottom: '10px', color: '#2196F3' }}>
                     Processing audio...
                 </div>
-            )}
+            )} */}
+            
             
             {error && (
                 <div style={{ marginBottom: '10px', color: '#f44336', padding: '10px', backgroundColor: '#ffebee', borderRadius: '5px' }}>
                     {error}
                 </div>
             )}
+            {messageHistory.length === 0 ? 
+                <Itro/>
+                :
+                <></>
+            }
 
             {/* Message History - Fixed Height */}
+            {messageHistory.length > 0 &&              
             <div style={{ 
                 flex: 1,
                 overflowY: 'auto',
                 padding: '20px',
                 // backgroundColor: '#f5f5f5',
                 minHeight: 0,
-                borderRadius: '10px'
-            }}>
+                borderRadius: '10px',
+                overflow: 'scroll'
                 
+            }}>
+               
+               
                 {messageHistory.map((message, index) => (
                     <div key={message.id} style={{ 
                         marginBottom: '20px',
@@ -562,6 +585,8 @@ const AiAgent = () => {
                     </div>
                 ))}
                 
+               
+                
                 {/* Loading Indicator */}
                 {isAgentResponding && (
                     <div style={{ 
@@ -619,7 +644,7 @@ const AiAgent = () => {
                 )}
                 
                 <div ref={messagesEndRef} />
-            </div>
+            </div>}
             
             {/* Footer with Control Buttons */}
             <div style={{ 
@@ -655,7 +680,7 @@ const AiAgent = () => {
                     disabled={isProcessing || isSpeaking}
                     style={{
                         padding: '10px 20px',
-                        backgroundColor: isRecording ?'#4CAF50'  : (isSpeaking ? '#cccccc' : '#1B2339'),
+                        backgroundColor: isRecording ?'#1364ff'  : (isSpeaking ? '#cccccc' : '#1B2339'),
                         color: 'white',
                         border: 'none',
                         borderRadius: 50,
@@ -690,6 +715,29 @@ const AiAgent = () => {
                         <img src={cross_icon} alt="cross" style={{ width: '20px', height: '20px' }} />
                     </button>
                 {/* )} */}
+            </div>
+            
+            {/* Live Gradient Effect */}
+            <div
+                ref={liveGradientRef}
+                className={`fixed bottom-[-110px] left-1/2 transform -translate-x-1/2 w-[150%] h-[370px] transition-all duration-150 ease-out z-[1] pointer-events-none blur-[30px] opacity-40 ${
+                    isTransportReady ? 'opacity-100' : 'opacity-40'
+                } ${
+                    isToolCallInProgress ? 'before:opacity-100' : 'before:opacity-0'
+                }`}
+                style={{
+                    background: isTransportReady 
+                        ? 'radial-gradient(ellipse at bottom, #1364ff 0%, transparent 70%)'
+                        : 'radial-gradient(ellipse at bottom, #010823 0%, transparent 80%)'
+                }}
+            >
+                <div 
+                    className="absolute inset-0 transition-opacity duration-500 ease-in-out"
+                    style={{
+                        background: 'radial-gradient(ellipse at bottom, #010823 0%, transparent 70%)',
+                        opacity: isToolCallInProgress ? 1 : 0
+                    }}
+                ></div>
             </div>
         </div>
     );
