@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import mic_icon from '../assets/mic.svg';
 import mute_icon from '../assets/mute.svg';
+import cross_icon from '../assets/cross.svg';
 
 const AiAgent = () => {
     //  State to manage recording status and transcribed text
@@ -11,6 +12,7 @@ const AiAgent = () => {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [messageHistory, setMessageHistory] = useState([]); // Store conversation history
     const [isAgentResponding, setIsAgentResponding] = useState(false); // Loading state for agent response
+    const [isMuted, setIsMuted] = useState(false); // Mute state
     const audioChunks = useRef([]); //  Buffer to store audio data
     const mediaRecorderRef = useRef(null); // Reference for MediaRecorder
     const streamRef = useRef(null); // Reference for the audio stream
@@ -185,6 +187,10 @@ const AiAgent = () => {
             const audioUrl = URL.createObjectURL(audioBlob);
             
             const audio = new Audio(audioUrl);
+            
+            // Set volume based on mute state
+            audio.volume = isMuted ? 0 : 1;
+            
             audio.onended = () => {
                 setIsSpeaking(false);
                 speechRef.current = null;
@@ -207,6 +213,16 @@ const AiAgent = () => {
             console.error('Error with ElevenLabs TTS:', error);
             setError(`Error generating speech: ${error.message}`);
             setIsSpeaking(false);
+        }
+    };
+
+    // Mute toggle function
+    const toggleMute = () => {
+        setIsMuted(!isMuted);
+        
+        // If currently speaking, update the volume immediately
+        if (speechRef.current) {
+            speechRef.current.volume = !isMuted ? 0 : 1;
         }
     };
 
@@ -368,7 +384,7 @@ const AiAgent = () => {
             margin: '0 auto',
             display: 'flex',
             flexDirection: 'column',
-            height: '80vh'
+            height: '86vh'
         }}>
             <style>
                 {`
@@ -560,11 +576,29 @@ const AiAgent = () => {
                 padding: '20px',
                 backgroundColor: 'white',
                 display: 'flex',
-                justifyContent: 'center',
+                justifyContent: 'space-evenly',
+                alignItems: 'end',
                 gap: '10px',
                 backgroundColor: '#1c1c1c'
                 // background: 'linear-gradient(to bottom, #1c1c1c, #756d31)'
+
             }}>
+                <button 
+                    onClick={toggleMute} 
+                    style={{
+                        padding: '10px 20px',
+                        backgroundColor: (isMuted ? '#cccccc' : '#f44336'),
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 50,
+                        cursor: 'pointer',
+                        width: '55px',
+                        height: '55px'
+                    }}
+                >
+                    <img src={mute_icon} alt="mic" style={{ width: '20px', height: '20px' }} />    
+                </button>
+
                 <button 
                     onClick={isRecording ? stopRecording : startRecording} 
                     disabled={isProcessing || isSpeaking}
@@ -575,8 +609,11 @@ const AiAgent = () => {
                         border: 'none',
                         borderRadius: 50,
                         cursor: (isProcessing || isSpeaking) ? 'not-allowed' : 'pointer',
-                        minWidth: '60px',
-                        height: '60px'
+                        width: '65px',
+                        height: '65px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                     }}
                 >
                     {isRecording ? <img src={mic_icon} alt="mic" style={{ width: '20px', height: '20px' }} /> : (isSpeaking ? <img src={mic_icon} alt="mic" style={{ width: '20px', height: '20px' }} /> : 
@@ -584,7 +621,7 @@ const AiAgent = () => {
                         )}
                 </button>
 
-                {/* {messageHistory.length > 0 && (
+                {/* {messageHistory.length > 0 && ( */}
                     <button 
                         onClick={clearMessageHistory}
                         disabled={isSpeaking}
@@ -595,13 +632,13 @@ const AiAgent = () => {
                             border: 'none',
                             borderRadius: 50,
                             cursor: isSpeaking ? 'not-allowed' : 'pointer',
-                            minWidth: '60px',
-                            height: '60px'
+                            width: '55px',
+                            height: '55px'
                         }}
                     >
-                        Cle
+                        <img src={cross_icon} alt="cross" style={{ width: '20px', height: '20px' }} />
                     </button>
-                )} */}
+                {/* )} */}
             </div>
         </div>
     );
