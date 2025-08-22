@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import mic_icon from '../assets/mic.svg';
 import mute_icon from '../assets/mute.svg';
+import volume_mute_icon from '../assets/volume_mute.svg';
 import cross_icon from '../assets/cross.svg';
 import Itro from './Itro';
 
@@ -47,12 +48,12 @@ const AiAgent = () => {
         {
             keywords: ['balance', 'account balance', 'how much', 'money', 'funds'],
             question: 'What is my account balance?',
-            answer: 'Your current account balance is $2,450.75. This includes your checking account with $1,200.50 and savings account with $1,250.25.'
+            answer: 'Your current account balance is ₹2,45000.75. This includes your checking account with ₹1,2000.50 and savings account with $1,250.25.'
         },
         {
             keywords: ['transaction', 'transaction status', 'payment', 'transfer', 'pending'],
             question: 'What is my transaction status?',
-            answer: 'Your recent transaction of $150.00 to Amazon.com is still pending and should be processed within 1-2 business days. Your previous transaction of $75.50 to Starbucks has been completed successfully.'
+            answer: 'Your recent transaction of ₹1500.00 to Amazon.com is still pending and should be processed within 1-2 business days. Your previous transaction of ₹750.50 to Starbucks has been completed successfully.'
         },
         {
             keywords: ['card', 'debit card', 'credit card', 'card status', 'blocked'],
@@ -62,22 +63,22 @@ const AiAgent = () => {
         {
             keywords: ['deposit', 'deposited', 'when', 'clear', 'available'],
             question: 'When will my deposit be available?',
-            answer: 'Your deposit of $500.00 made today will be available in your account by tomorrow morning at 9 AM. Standard deposits typically clear within 1 business day.'
+            answer: 'Your deposit of ₹50000.00 made today will be available in your account by tomorrow morning at 9 AM. Standard deposits typically clear within 1 business day.'
         },
         {
             keywords: ['withdraw', 'withdrawal', 'atm', 'cash', 'limit'],
             question: 'What is my withdrawal limit?',
-            answer: 'Your daily ATM withdrawal limit is $500.00, and your daily purchase limit is $2,000.00. You can increase these limits by contacting customer service.'
+            answer: 'Your daily ATM withdrawal limit is ₹5000.00, and your daily purchase limit is ₹12,000.00. You can increase these limits by contacting customer service.'
         },
         {
             keywords: ['interest', 'rate', 'savings', 'apy', 'earnings'],
             question: 'What is my interest rate?',
-            answer: 'Your savings account currently earns 2.5% APY. You earned $15.75 in interest this month. Your checking account earns 0.1% APY on balances over $1,000.'
+            answer: 'Your savings account currently earns 2.5% APY. You earned ₹150.75 in interest this month. Your checking account earns 0.1% APY on balances over ₹1,000.'
         },
         {
             keywords: ['fee', 'charges', 'monthly fee', 'service charge'],
             question: 'Are there any fees on my account?',
-            answer: 'You have no monthly maintenance fees on your account. Your last transaction fee was $3.50 for an out-of-network ATM withdrawal on March 15th.'
+            answer: 'You have no monthly maintenance fees on your account. Your last transaction fee was ₹3.50 for an out-of-network ATM withdrawal on March 15th.'
         },
         {
             keywords: ['statement', 'monthly statement', 'bill', 'invoice'],
@@ -87,7 +88,7 @@ const AiAgent = () => {
         {
             keywords: ['loan', 'mortgage', 'payment', 'due date', 'installment'],
             question: 'When is my loan payment due?',
-            answer: 'Your mortgage payment of $1,250.00 is due on the 15th of each month. Your next payment is due in 8 days. You can make early payments through the mobile app.'
+            answer: 'Your mortgage payment of ₹1,25000.00 is due on the 15th of each month. Your next payment is due in 8 days. You can make early payments through the mobile app.'
         },
         {
             keywords: ['fraud', 'suspicious', 'unauthorized', 'security', 'alert'],
@@ -672,7 +673,7 @@ const AiAgent = () => {
                         height: '55px'
                     }}
                 >
-                    <img src={mute_icon} alt="mic" style={{ width: '20px', height: '20px' }} />    
+                    <img src={volume_mute_icon} alt="mic" style={{ width: '20px', height: '20px' }} />    
                 </button>
 
                 <button 
