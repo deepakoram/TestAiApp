@@ -12,7 +12,7 @@ const SpeechToText = () => {
     }
   ]);
   const [currentMessage, setCurrentMessage] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
+  const [_, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState(null);
   const messagesEndRef = useRef(null);
   const finalTranscriptRef = useRef('');
@@ -199,6 +199,8 @@ const SpeechToText = () => {
       setCurrentMessage('');
     }
   };
+
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-900 to-black text-white flex flex-col">

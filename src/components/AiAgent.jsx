@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import mic_icon from '../assets/mic.svg';
-import mute_icon from '../assets/mute.svg';
+// import mute_icon from '../assets/mute.svg';
 import volume_mute_icon from '../assets/volume_mute.svg';
 import cross_icon from '../assets/cross.svg';
 import Itro from './Itro';
@@ -272,14 +272,14 @@ const AiAgent = () => {
     };
 
     // Stop speaking function
-    const stopSpeaking = () => {
-        if (speechRef.current) {
-            speechRef.current.pause();
-            speechRef.current.currentTime = 0;
-            setIsSpeaking(false);
-            speechRef.current = null;
-        }
-    };
+    // const stopSpeaking = () => {
+    //     if (speechRef.current) {
+    //         speechRef.current.pause();
+    //         speechRef.current.currentTime = 0;
+    //         setIsSpeaking(false);
+    //         speechRef.current = null;
+    //     }
+    // };
 
     //  Start recording
     const startRecording = async () => {
@@ -505,7 +505,7 @@ const AiAgent = () => {
             }}>
                
                
-                {messageHistory.map((message, index) => (
+                {messageHistory.map((message) => (
                     <div key={message.id} style={{ 
                         marginBottom: '20px',
                         display: 'flex',
@@ -650,7 +650,6 @@ const AiAgent = () => {
             {/* Footer with Control Buttons */}
             <div style={{ 
                 padding: '20px',
-                backgroundColor: 'white',
                 display: 'flex',
                 justifyContent: 'space-evenly',
                 alignItems: 'end',
